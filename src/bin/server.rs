@@ -4,19 +4,31 @@ use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::time::{Duration, Instant};
 
+use quic_example::certs;
 use quic_example::{MAX_DATAGRAM_SIZE, SERVER_ADDR, make_server_config};
-
-const CERT_PATH: &str = "quiche/quiche/examples/cert.crt";
-const KEY_PATH: &str = "quiche/quiche/examples/cert.key";
 
 fn main() -> Result<(), Box<dyn Error>> {
     let server_addr: SocketAddr = SERVER_ADDR.parse()?;
+    let cert_paths = certs::default_local_cert_paths();
+    let (cert_paths, created) =
+        certs::ensure_localhost_cert_files(&cert_paths.cert_path, &cert_paths.key_path)?;
+
+    if created {
+        println!(
+            "Generated self-signed certs: {} and {}",
+            cert_paths.cert_path.display(),
+            cert_paths.key_path.display()
+        );
+    }
+
     let socket = UdpSocket::bind(server_addr)?;
     socket.set_read_timeout(Some(Duration::from_millis(250)))?;
 
     println!("Server listening on {server_addr}");
 
-    let mut config = make_server_config(CERT_PATH, KEY_PATH)?;
+    let cert_path = cert_paths.cert_path.to_string_lossy().into_owned();
+    let key_path = cert_paths.key_path.to_string_lossy().into_owned();
+    let mut config = make_server_config(&cert_path, &key_path)?;
     let mut conn: Option<quiche::Connection> = None;
 
     let mut buf = [0u8; 65535];

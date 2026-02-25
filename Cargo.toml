@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 quiche = "0.25"
+rcgen = "0.13"

@@ -1,3 +1,5 @@
+pub mod certs;
+
 pub const MAX_DATAGRAM_SIZE: usize = 1350;
 pub const HELLO_STREAM_ID: u64 = 0;
 pub const CLIENT_ADDR: &str = "127.0.0.1:4444";
@@ -5,9 +7,10 @@ pub const SERVER_ADDR: &str = "127.0.0.1:5555";
 
 const ALPN: &[u8] = b"hello-quic";
 
-pub fn make_client_config() -> Result<quiche::Config, quiche::Error> {
+pub fn make_client_config(ca_cert_path: &str) -> Result<quiche::Config, quiche::Error> {
     let mut config = quiche::Config::new(quiche::PROTOCOL_VERSION)?;
-    config.verify_peer(false);
+    config.verify_peer(true);
+    config.load_verify_locations_from_file(ca_cert_path)?;
     config.set_application_protos(&[ALPN])?;
     configure_transport(&mut config);
 

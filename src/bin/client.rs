@@ -3,6 +3,7 @@ use std::io::ErrorKind;
 use std::net::{SocketAddr, UdpSocket};
 use std::time::{Duration, Instant};
 
+use quic_example::certs;
 use quic_example::{
     CLIENT_ADDR, HELLO_STREAM_ID, MAX_DATAGRAM_SIZE, SERVER_ADDR, make_client_config,
 };
@@ -10,11 +11,23 @@ use quic_example::{
 fn main() -> Result<(), Box<dyn Error>> {
     let client_addr: SocketAddr = CLIENT_ADDR.parse()?;
     let server_addr: SocketAddr = SERVER_ADDR.parse()?;
+    let cert_paths = certs::default_local_cert_paths();
+    let (_, created) =
+        certs::ensure_localhost_cert_files(&cert_paths.cert_path, &cert_paths.key_path)?;
+
+    if created {
+        println!(
+            "Generated self-signed certs: {} and {}",
+            cert_paths.cert_path.display(),
+            cert_paths.key_path.display()
+        );
+    }
 
     let socket = UdpSocket::bind(client_addr)?;
     println!("Client bound on {client_addr}, connecting to {server_addr}");
 
-    let mut config = make_client_config()?;
+    let ca_cert_path = cert_paths.cert_path.to_string_lossy().into_owned();
+    let mut config = make_client_config(&ca_cert_path)?;
     let scid = quiche::ConnectionId::from_ref(&[0xba; quiche::MAX_CONN_ID_LEN]);
 
     let local_addr = socket.local_addr()?;
